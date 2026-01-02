@@ -116,7 +116,6 @@
             <div class="glass-card full-height-card">
                 <h2>Finanzas</h2>
                 <div class="finance-grid">
-                    
                     <div class="fin-card profit" onclick="toggleCard(this)">
                         <span class="material-icons-round">savings</span>
                         <div>
@@ -125,16 +124,14 @@
                             <small class="fin-desc">(Dinero - Gastos)</small>
                         </div>
                     </div>
-
                     <div class="fin-card expense" onclick="toggleCard(this)">
                         <span class="material-icons-round">trending_down</span>
                         <div>
                             <small class="fin-title">Total Gastos</small>
                             <p id="totalExpenses">$0</p>
-                            <small class="fin-desc">(Salidas Registradas)</small>
+                            <small class="fin-desc">(Salidas)</small>
                         </div>
                     </div>
-
                     <div class="fin-card income" onclick="toggleCard(this)">
                         <span class="material-icons-round">payments</span>
                         <div>
@@ -143,7 +140,6 @@
                             <small class="fin-desc">(Ingresos Brutos)</small>
                         </div>
                     </div>
-
                 </div>
 
                 <button class="btn-action" onclick="openExpenseModal()">
@@ -154,6 +150,10 @@
                     <ul id="expensesList" class="scroll-list compact"></ul>
                 </div>
             </div>
+
+            <footer class="app-footer">
+                <small>Desarrollado por <strong>Javier Álvarez</strong> | Ingeniero en Informática</small>
+            </footer>
         </section>
 
     </main>

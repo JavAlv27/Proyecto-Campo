@@ -14,7 +14,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// DOM & UI
 const calendar = document.getElementById('calendar');
 const monthYear = document.getElementById('monthYear');
 const historyList = document.getElementById('historyList');
@@ -54,7 +53,6 @@ const totalIncomeEl = document.getElementById('totalIncome');
 const realProfitEl = document.getElementById('realProfit');
 const grossIncomeEl = document.getElementById('grossIncome');
 const totalExpensesEl = document.getElementById('totalExpenses');
-const totalMovementEl = document.getElementById('totalMovement');
 
 let currentDate = new Date();
 let bookings = {};
@@ -63,7 +61,6 @@ let barChartInstance = null;
 let selectedDashboardYear = new Date().getFullYear();
 let sortableInstance = null;
 
-// --- SORTABLE ---
 function initSortable() {
     if (sortableInstance) sortableInstance.destroy();
     const el = document.getElementById('historyList');
@@ -74,8 +71,13 @@ function initSortable() {
         dragClass: 'sortable-drag',
         delay: 150, delayOnTouchOnly: true,
         onEnd: function (evt) {
-            // Esta función solo sirve para reordenar visualmente si se usa drag
-            // No afecta el orden estricto por fecha si no se implementa lógica extra
+            const items = el.querySelectorAll('.history-item');
+            const updates = {};
+            items.forEach((item, index) => {
+                const dateKey = item.dataset.id;
+                updates['bookings/' + dateKey + '/customOrder'] = index;
+            });
+            update(ref(db), updates);
         }
     });
 }
@@ -96,7 +98,6 @@ document.documentElement.setAttribute('data-theme', savedTheme);
 themeBtn.querySelector('span').innerText = savedTheme === 'dark' ? 'light_mode' : 'dark_mode';
 themeBtn.onclick = toggleTheme;
 
-// --- LISTENERS ---
 const bookingsRef = ref(db, 'bookings');
 onValue(bookingsRef, (snapshot) => {
     bookings = snapshot.val() || {};
@@ -126,14 +127,11 @@ function calculateFinances() {
     Object.values(expenses).forEach(item => { totalExp += (parseInt(item.amount) || 0); });
     
     const netProfit = totalGross - totalExp;
-    const movement = totalGross + totalExp;
 
     grossIncomeEl.innerText = `$${totalGross.toLocaleString()}`;
     totalExpensesEl.innerText = `$${totalExp.toLocaleString()}`;
     realProfitEl.innerText = `$${netProfit.toLocaleString()}`;
-    totalMovementEl.innerText = `$${movement.toLocaleString()}`;
     realProfitEl.style.color = netProfit < 0 ? 'var(--danger)' : 'var(--success)';
-    
     updateDashboardKPIText();
 }
 
@@ -165,7 +163,6 @@ statusFilter.addEventListener('change', (e) => {
     updateHistory();
 });
 
-// --- HISTORIAL ---
 function updateHistory() {
     historyList.innerHTML = "";
     const term = searchInput.value.toLowerCase();
@@ -179,16 +176,17 @@ function updateHistory() {
         return true;
     });
 
-    // --- ORDENAMIENTO ESTRICTO POR FECHA (Ascendente: 19 antes que 20) ---
     filtered.sort((a, b) => {
-        // Función para convertir "YYYY-M-D" a un valor comparable
-        const toTime = (dateStr) => {
-            const parts = dateStr.split('-'); 
-            // year, month index (0-11), day
-            return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
-        };
-
-        return toTime(a.date) - toTime(b.date);
+        if (type === 'all' && (a.customOrder !== undefined || b.customOrder !== undefined)) {
+             const oA = a.customOrder !== undefined ? a.customOrder : 999999;
+             const oB = b.customOrder !== undefined ? b.customOrder : 999999;
+             return oA - oB;
+        }
+        
+        // ORDEN POR FECHA EVENTO ASC (19, 20, 21...)
+        const dateA = new Date(a.date.replace(/-/g, '/'));
+        const dateB = new Date(b.date.replace(/-/g, '/'));
+        return dateA - dateB; 
     });
 
     if (filtered.length === 0) { historyList.innerHTML = "<div style='text-align:center; padding:20px; color:var(--text-muted);'>Sin registros.</div>"; return; }
@@ -215,7 +213,6 @@ searchInput.addEventListener('input', updateHistory);
 
 function renderExpensesList() {
     expensesList.innerHTML = "";
-    
     const getExpenseTime = (exp) => {
         if (exp.timestamp) return exp.timestamp;
         if (exp.date) {
@@ -225,7 +222,6 @@ function renderExpensesList() {
         return 0; 
     };
     const list = Object.keys(expenses).map(key => ({ id: key, ...expenses[key] }));
-    // Gastos: Lo último arriba (Descendente)
     list.sort((a, b) => getExpenseTime(b) - getExpenseTime(a));
     if (list.length === 0) { expensesList.innerHTML = "<p style='text-align:center; color:#888'>No hay gastos.</p>"; return; }
     list.forEach(item => {
@@ -310,13 +306,20 @@ window.onclick = (e) => { if(e.target.classList.contains('modal-backdrop')) e.ta
 
 resForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    if(nameInput.value.trim() === "") return alert("Falta nombre");
+    if(!/^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ]+$/.test(nameInput.value)) return alert("Nombre: solo letras");
     if(phoneInput.value && !/^[0-9]+$/.test(phoneInput.value)) return alert("Teléfono solo números");
     
-    // Guardamos datos normales. El 'createdAt' ya no se usa para ordenar, pero lo guardamos por si acaso.
-    // El 'customOrder' lo dejamos igual para no romper drag manual futuro.
-    let currentOrder = customOrderInput.value !== "" ? parseInt(customOrderInput.value) : 999999;
-    let timestamp = (createdAtInput.value && createdAtInput.value !== "") ? parseInt(createdAtInput.value) : Date.now();
+    let currentOrder;
+    if (customOrderInput.value !== "") currentOrder = parseInt(customOrderInput.value);
+    else {
+        const allOrders = Object.values(bookings).map(b => b.customOrder).filter(o => o !== undefined);
+        const min = allOrders.length > 0 ? Math.min(...allOrders) : 0;
+        currentOrder = min - 1;
+    }
+    
+    let timestamp;
+    if (createdAtInput.value && createdAtInput.value !== "") timestamp = parseInt(createdAtInput.value);
+    else timestamp = Date.now();
 
     set(ref(db, 'bookings/' + dateInput.value), {
         name: nameInput.value, phone: phoneInput.value, price: priceInput.value,

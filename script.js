@@ -14,6 +14,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// DOM & UI
 const calendar = document.getElementById('calendar');
 const monthYear = document.getElementById('monthYear');
 const historyList = document.getElementById('historyList');
@@ -61,27 +62,23 @@ let barChartInstance = null;
 let selectedDashboardYear = new Date().getFullYear();
 let sortableInstance = null;
 
+// --- SORTABLE JS (Opcional, visual) ---
 function initSortable() {
     if (sortableInstance) sortableInstance.destroy();
+    
     const el = document.getElementById('historyList');
     if (!el) return;
+
     sortableInstance = new Sortable(el, {
         animation: 150,
         ghostClass: 'sortable-ghost',
         dragClass: 'sortable-drag',
         delay: 150, delayOnTouchOnly: true,
-        onEnd: function (evt) {
-            const items = el.querySelectorAll('.history-item');
-            const updates = {};
-            items.forEach((item, index) => {
-                const dateKey = item.dataset.id;
-                updates['bookings/' + dateKey + '/customOrder'] = index;
-            });
-            update(ref(db), updates);
-        }
+        // Eliminamos la lógica onEnd para que no interfiera con el orden de fecha
     });
 }
 
+// --- UI HELPERS ---
 window.toggleCard = (el) => el.classList.toggle('active');
 
 const toggleTheme = () => {
@@ -98,6 +95,7 @@ document.documentElement.setAttribute('data-theme', savedTheme);
 themeBtn.querySelector('span').innerText = savedTheme === 'dark' ? 'light_mode' : 'dark_mode';
 themeBtn.onclick = toggleTheme;
 
+// --- FIREBASE LISTENERS ---
 const bookingsRef = ref(db, 'bookings');
 onValue(bookingsRef, (snapshot) => {
     bookings = snapshot.val() || {};
@@ -121,6 +119,7 @@ function refreshAllUI() {
     }
 }
 
+// --- FINANZAS ---
 function calculateFinances() {
     let totalGross = 0; let totalExp = 0;
     Object.values(bookings).forEach(item => { if (item.status === true) totalGross += (parseInt(item.price) || 0); });
@@ -163,6 +162,7 @@ statusFilter.addEventListener('change', (e) => {
     updateHistory();
 });
 
+// --- HISTORIAL (ORDEN CRONOLÓGICO ESTRICTO) ---
 function updateHistory() {
     historyList.innerHTML = "";
     const term = searchInput.value.toLowerCase();
@@ -176,16 +176,15 @@ function updateHistory() {
         return true;
     });
 
+    // ORDEN: FECHA EVENTO (ASCENDENTE -> 19 antes que 20)
     filtered.sort((a, b) => {
-        if (type === 'all' && (a.customOrder !== undefined || b.customOrder !== undefined)) {
-             const oA = a.customOrder !== undefined ? a.customOrder : 999999;
-             const oB = b.customOrder !== undefined ? b.customOrder : 999999;
-             return oA - oB;
-        }
+        // Parsear fecha YYYY-M-D a Timestamp para comparar números
+        const partsA = a.date.split('-');
+        const dateA = new Date(partsA[0], partsA[1] - 1, partsA[2]).getTime();
         
-        // ORDEN POR FECHA EVENTO ASC (19, 20, 21...)
-        const dateA = new Date(a.date.replace(/-/g, '/'));
-        const dateB = new Date(b.date.replace(/-/g, '/'));
+        const partsB = b.date.split('-');
+        const dateB = new Date(partsB[0], partsB[1] - 1, partsB[2]).getTime();
+
         return dateA - dateB; 
     });
 
@@ -199,18 +198,18 @@ function updateHistory() {
         const badgeText = item.status ? 'LISTA' : 'ESPERA';
         li.innerHTML = `<div><strong>${item.name}</strong><small><span class="material-icons-round" style="font-size:14px">event</span> ${item.date}</small></div><div style="text-align:right"><span class="badge-status ${badgeClass}">${badgeText}</span><div style="margin-top:5px; font-weight:700">$${parseInt(item.price).toLocaleString()}</div></div>`;
         li.addEventListener('click', (e) => {
-             if(li.classList.contains('sortable-drag')) return;
              const parts = item.date.split('-'); 
              openBookingModal(item.date, new Date(parts[0], parts[1]-1, parts[2]));
         });
         historyList.appendChild(li);
     });
-
-    if (type === 'all') { initSortable(); } 
-    else if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
+    
+    // Activar sortable solo para efecto visual, no guarda orden
+    if (type === 'all') initSortable();
 }
 searchInput.addEventListener('input', updateHistory);
 
+// --- GASTOS ---
 function renderExpensesList() {
     expensesList.innerHTML = "";
     const getExpenseTime = (exp) => {
@@ -309,17 +308,9 @@ resForm.addEventListener('submit', (e) => {
     if(!/^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ]+$/.test(nameInput.value)) return alert("Nombre: solo letras");
     if(phoneInput.value && !/^[0-9]+$/.test(phoneInput.value)) return alert("Teléfono solo números");
     
-    let currentOrder;
-    if (customOrderInput.value !== "") currentOrder = parseInt(customOrderInput.value);
-    else {
-        const allOrders = Object.values(bookings).map(b => b.customOrder).filter(o => o !== undefined);
-        const min = allOrders.length > 0 ? Math.min(...allOrders) : 0;
-        currentOrder = min - 1;
-    }
-    
-    let timestamp;
-    if (createdAtInput.value && createdAtInput.value !== "") timestamp = parseInt(createdAtInput.value);
-    else timestamp = Date.now();
+    // Guardar datos
+    let currentOrder = customOrderInput.value !== "" ? parseInt(customOrderInput.value) : 999999;
+    let timestamp = (createdAtInput.value && createdAtInput.value !== "") ? parseInt(createdAtInput.value) : Date.now();
 
     set(ref(db, 'bookings/' + dateInput.value), {
         name: nameInput.value, phone: phoneInput.value, price: priceInput.value,

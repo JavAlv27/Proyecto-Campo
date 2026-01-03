@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piscina Florangel | Acceso</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+    /* 1. ESTO ES LO NUEVO: Hacer transparente el fondo del body para ver la imagen */
+    body {
+        background-color: transparent !important;
+    }
+
+    /* 2. Configuración de la imagen de fondo */
+    .login-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;  /* Usamos VW/VH para asegurar pantalla completa */
+        height: 100vh;
+        
+        /* Asegúrate que el nombre coincida EXACTO con tu archivo */
+        background-image: url('Proyecto campo.jpeg'); 
+        
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: cover;
+        
+        /* Efectos */
+        filter: blur(8px);
+        -webkit-filter: blur(8px);
+        transform: scale(1.1);
+        
+        /* Z-Index negativo pero controlado */
+        z-index: -2;
+    }
+
+    /* 3. Capa oscura para que el texto se lea bien */
+    .dark-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5); /* Oscurecer al 50% */
+        z-index: -1;
+    }
+        .profile-grid { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+        .profile-card {
+            display: flex; flex-direction: column; align-items: center; cursor: pointer;
+            transition: transform 0.3s; width: 100px;
+        }
+        .profile-card:hover { transform: scale(1.1); }
+        .avatar-img {
+            width: 80px; height: 80px; border-radius: 50%; border: 3px solid transparent;
+            margin-bottom: 10px; background: var(--input-bg); object-fit: cover;
+            transition: border-color 0.3s;
+        }
+        .profile-card:hover .avatar-img { border-color: var(--primary); box-shadow: 0 0 15px var(--primary-glow); }
+        .profile-name { font-weight: 600; font-size: 0.9rem; text-align: center; }
+        .profile-role { font-size: 0.7rem; color: var(--text-muted); }
+        
+        /* Modal de contraseña */
+        #passwordArea { display: none; flex-direction: column; align-items: center; animation: fadeIn 0.4s; }
+        .selected-user-preview { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; background: var(--input-bg); padding: 10px 20px; border-radius: 50px; }
+        .mini-avatar { width: 30px; height: 30px; border-radius: 50%; }
+        .back-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; margin-top: 10px; display: flex; align-items: center; font-size: 0.8rem; }
+        .back-btn:hover { color: var(--text-main); }
+    </style>
+</head>
+<body>
+    <div class="login-bg"></div>
+    <div class="dark-overlay"></div>
+
+    <div class="full-screen">
+    <div class="background-glow"></div>
+
+    <div class="full-screen">
+        <div class="glass-card" style="max-width: 500px; min-height: 300px; justify-content: center;">
+            
+            <div id="profilesView">
+                <div style="text-align: center;">
+                    <h2 style="margin-bottom: 5px;">¿Quién eres?</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Selecciona tu perfil para ingresar</p>
+                </div>
+                <div id="loading" style="text-align: center; margin-top: 20px;">Cargando usuarios...</div>
+                <div class="profile-grid" id="profileGrid"></div>
+            </div>
+
+            <form id="passwordArea">
+                <div class="selected-user-preview">
+                    <img id="selectedAvatar" src="" class="mini-avatar">
+                    <span id="selectedName" style="font-weight: 600;">Usuario</span>
+                </div>
+
+                <div class="input-group" style="width: 100%;">
+                    <input type="password" id="passwordInput" placeholder="Contraseña..." required style="text-align: center; font-size: 1.2rem; letter-spacing: 2px;">
+                </div>
+                
+                <p id="errorMsg" style="color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none;"></p>
+
+                <button type="submit" class="btn-primary" style="margin-top: 15px; width: 100%;">Ingresar</button>
+                
+                <button type="button" class="back-btn" onclick="resetView()">
+                    <span class="material-icons-round" style="font-size: 16px; margin-right: 5px;">arrow_back</span> Elegir otro usuario
+                </button>
+            </form>
+
+        </div>
+        
+        <footer class="app-footer"><small>Piscina Florangel Admin</small></footer>
+    </div>
+
+    <script type="module" src="login.js"></script>
+</body>
+</html>

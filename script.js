@@ -1,5 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove, update, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+// 1. IMPORTAMOS LAS HERRAMIENTAS DE LOGIN
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAbVB5CcSGgtOY856Wv_nNdJP-z2oD3X_k",
@@ -13,6 +15,16 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app); // 2. INICIALIZAMOS EL AUTH
+
+// 3. EL GUARDIA DE SEGURIDAD (Si no hay usuario, te manda fuera)
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        window.location.href = "login.html"; // <--- ESTO CONECTA CON EL LOGIN
+    } else {
+        console.log("Usuario dentro:", user.email);
+    }
+});
 
 // DOM & UI
 const calendar = document.getElementById('calendar');
